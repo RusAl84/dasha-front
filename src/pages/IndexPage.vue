@@ -10,8 +10,8 @@
         <div>
           <q-card-section>
             <q-uploader
-              :url="hostae_uploadae"
-              label="Загрузите свои данные .json, chatMessages/*"
+              :url="uploadae"
+              label="Загрузите данные .json, chatMessages/*"
               square
               flat
               bordered
@@ -130,18 +130,28 @@
             float-label="Введите текст для анализа"
           />
           <q-card-section>
+            <q-select
+              filled
+              v-model="counts"
+              :options="options"
+              label="Нечеткость"
+            />
+          </q-card-section>
+          <q-card-section>
             <q-btn color="primary" label="Поиск" @click="onFind_data" />
           </q-card-section>
           <q-card-section>
             <div class="text-h6">Полученная сигнатура (сжатый портрет):</div>
           </q-card-section>
-          <q-input
-            class="inputtext"
-            v-model="sig_text"
-            type="textarea"
-            readonly
-            autogrow
-          />
+          <q-card-section>
+            <q-input
+              class="inputtext"
+              v-model="sig_text"
+              type="textarea"
+              readonly
+              autogrow
+            />
+          </q-card-section>
           <q-card-section>
             <q-btn
               color="primary"
@@ -157,26 +167,10 @@
         <div>
           <q-card-section>
             <div class="text-h6">
-              Найденные активные эксплоиты в корпоративных диалоговых текстах:
+              Найденные фрагменты целевой информации в диалоговых текстах:
             </div>
           </q-card-section>
-          <q-card-section class="q-gutter-lg">
-            <div>
-              <q-select
-                filled
-                v-model="ttype"
-                :options="options"
-                label="Выберите алгоритм"
-              />
-            </div>
-            <div>
-              <q-btn
-                color="primary"
-                label="Поиск активных эксплоитов"
-                @click="onFindCL"
-              />
-            </div>
-          </q-card-section>
+          <q-card-section class="q-gutter-lg"> </q-card-section>
           <!-- <q-card-section>
             {{ filename }}
           </q-card-section> -->
@@ -187,8 +181,8 @@
           <div>
             <b>Найденный фрагмент &nbsp; {{ i + 1 }}</b>
           </div>
-          <div><b>Исходный текст сообщения:</b> {{ line.text }}</div>
-          <div><b>Сжатый портрет: </b>{{ line.RAKE }}</div>
+          <div><b>Текст сообщения:</b> {{ line.text }}</div>
+
           <br />
         </div> </q-card-section
     ></q-card>
@@ -203,6 +197,7 @@ export default {
   data() {
     return {
       file: "",
+      uploadae: "http://127.0.0.1:5000/uploadae",
       find_data: "http://127.0.0.1:5000/find_data",
       data_proc: "http://127.0.0.1:5000/data_proc",
       get_sig: "http://127.0.0.1:5000/get_sig",
@@ -214,7 +209,13 @@ export default {
       all_data: ref([{}]),
       ae_data: ref([{}]),
       filename: ref(""),
-      options: ["RAKE", "YAKE", "BERT"],
+      options: ref([
+        "точное совпадение",
+        "очень похоже",
+        "похоже",
+        "хоть что-то",
+      ]),
+      counts: ref("точное совпадение"),
     };
   },
   methods: {
@@ -231,12 +232,18 @@ export default {
         method: "post",
         url: this.find_data,
         data: {
+          filename: this.filename,
           find_text: this.find_text,
+          fuzz: this.counts,
+        },
+        headers: {
+          "Content-Type": "application/json",
         },
       });
-      console.log(response);
-      this.resp_data = response.data;
-      this.resp_text = response.data.print_text;
+      // console.log(response);
+      this.ae_data = response.data;
+      console.log("ae_data");
+      console.log(this.ae_data);
     },
     async onGet_Sig() {
       const response = await axios({
