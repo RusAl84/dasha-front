@@ -120,9 +120,7 @@
       <div class="flexrow">
         <div>
           <q-card-section>
-            <div class="text-h6">
-              Поиск целевой информации:
-            </div>
+            <div class="text-h6">Поиск целевой информации:</div>
           </q-card-section>
           <q-input
             class="inputtext"
@@ -132,14 +130,14 @@
             float-label="Введите текст для анализа"
           />
           <q-card-section>
-            <q-btn color="primary" label="Поиск" @click="onProc" />
+            <q-btn color="primary" label="Поиск" @click="onFind_data" />
           </q-card-section>
           <q-card-section>
             <div class="text-h6">Полученная сигнатура (сжатый портрет):</div>
           </q-card-section>
           <q-input
             class="inputtext"
-            v-model="resp_text"
+            v-model="sig_text"
             type="textarea"
             readonly
             autogrow
@@ -147,46 +145,13 @@
           <q-card-section>
             <q-btn
               color="primary"
-              label="Добавить в базу скомпрометированных сообщений"
-              @click="onProcAdd"
+              label="Получить сигнатуры (сжатый портрет)"
+              @click="onGet_Sig"
             />
           </q-card-section>
         </div></div
     ></q-card>
-    <q-card class="chatmessages">
-      <div class="flexrow">
-        <div>
-          <q-card-section>
-            <div class="text-h6">База скомпроментированных сообщений:</div>
-          </q-card-section>
-          <div class="flexrow">
-            <q-card-section>
-              <q-btn color="primary" label="Загрузить базу" @click="onLoadDB" />
-            </q-card-section>
-            <q-card-section>
-              <q-btn color="primary" label="Очистить базу" @click="onClearDB" />
-            </q-card-section>
-          </div>
-          <q-card-section v-if="all_data.length > 1">
-            <div v-for="(line, i) in all_data" :key="i">
-              <div><b>Сообщение {{ i+1 }}</b></div>
-              <div>Исходный текст сообщения: {{ line.text }}</div>
-              <div>Текст в нормальной форме: {{ line.normal_form }}</div>
-              <div>
-                Ключевые слова по алгоритму Rake: {{ line.RAKE }}
-              </div>
-              <div>
-                Ключевые слова по алгоритму Yake: {{ line.YAKE }}
-              </div>
-              <div>
-                Ключевые слова по алгоритму BERT: {{ line.BERT }}
-              </div>
-              <br />
-            </div>
-          </q-card-section>
-        </div>
-      </div>
-    </q-card>
+
     <q-card class="chatmessages">
       <div class="flexrow">
         <div>
@@ -196,14 +161,21 @@
             </div>
           </q-card-section>
           <q-card-section class="q-gutter-lg">
-
-            <div><q-select filled v-model="ttype" :options="options" label="Выберите алгоритм" /></div>
             <div>
-            <q-btn
-              color="primary"
-              label="Поиск активных эксплоитов"
-              @click="onFindCL"
-            /></div>
+              <q-select
+                filled
+                v-model="ttype"
+                :options="options"
+                label="Выберите алгоритм"
+              />
+            </div>
+            <div>
+              <q-btn
+                color="primary"
+                label="Поиск активных эксплоитов"
+                @click="onFindCL"
+              />
+            </div>
           </q-card-section>
           <!-- <q-card-section>
             {{ filename }}
@@ -212,11 +184,11 @@
       </div>
       <q-card-section v-if="ae_data.length > 0">
         <div v-for="(line, i) in ae_data" :key="i">
-          <div><b>Найденный фрагмент &nbsp; {{ i+1 }}</b></div>
+          <div>
+            <b>Найденный фрагмент &nbsp; {{ i + 1 }}</b>
+          </div>
           <div><b>Исходный текст сообщения:</b> {{ line.text }}</div>
-          <div><b>RAKE: </b>{{ line.RAKE }}</div>
-          <div><b>YAKE:</b> {{ line.YAKE }}</div>
-          <div><b>BERT: </b>{{ line.BERT }}</div>
+          <div><b>Сжатый портрет: </b>{{ line.RAKE }}</div>
           <br />
         </div> </q-card-section
     ></q-card>
@@ -233,17 +205,16 @@ export default {
       file: "",
       find_data: "http://127.0.0.1:5000/find_data",
       data_proc: "http://127.0.0.1:5000/data_proc",
+      get_sig: "http://127.0.0.1:5000/get_sig",
       chatmessages: "",
       find_text: ref(""),
       ttype: ref(""),
-      resp_text: ref(""),
+      sig_text: ref(""),
       resp_data: ref(""),
       all_data: ref([{}]),
       ae_data: ref([{}]),
       filename: ref(""),
-      options: [
-        'RAKE', 'YAKE', 'BERT'
-      ]
+      options: ["RAKE", "YAKE", "BERT"],
     };
   },
   methods: {
@@ -260,12 +231,23 @@ export default {
         method: "post",
         url: this.find_data,
         data: {
-          text: this.find_data,
+          find_text: this.find_text,
         },
       });
       console.log(response);
       this.resp_data = response.data;
       this.resp_text = response.data.print_text;
+    },
+    async onGet_Sig() {
+      const response = await axios({
+        method: "post",
+        url: this.get_sig,
+        data: {
+          text: this.find_text,
+        },
+      });
+      console.log(response);
+      this.sig_text = response.data;
     },
     async onProcAdd() {
       const response = await axios({
@@ -275,15 +257,6 @@ export default {
       });
       this.all_data = response.data;
       console.log("this.resp_data");
-      console.log(this.all_data);
-    },
-    async onLoadDB() {
-      const response = await axios({
-        method: "get",
-        url: "",
-        data: this.resp_data,
-      });
-      this.all_data = response.data;
       console.log(this.all_data);
     },
   },
